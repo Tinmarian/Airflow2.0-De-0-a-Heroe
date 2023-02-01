@@ -8,7 +8,7 @@ from airflow.providers.google.cloud.operators.bigquery import BigQueryExecuteQue
 
 ######################### AWS S3 to GCS
 from airflow.providers.google.cloud.transfers.s3_to_gcs import S3ToGCSOperator
-
+from airflow.operators.dummy import DummyOperator
 
 default_args = {
     'owner': 'Rodrigo N',
@@ -25,11 +25,13 @@ dag_args = {
 
 with DAG(**dag_args,tags=['Curso_1']) as dag:
 
+    start_task = DummyOperator(task_id='start_task')
+
     #########################
     transferir_aws = S3ToGCSOperator(
         task_id='transferir_aws',
-        bucket='airflowbucket-987',
-        dest_gcs='gs://aws-bucket-987',
+        bucket='airflow23-bucket',
+        dest_gcs='gs://aws_airflow23',
         prefix='retail_',
         replace=False,
         aws_conn_id='aws_default',
@@ -39,12 +41,12 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 
     cargar_datos = GCSToBigQueryOperator(
         task_id='cargar_datos',
-        bucket='aws-bucket-987',   #########################
+        bucket='aws_airflow23',   #########################
         source_objects=['*'],
         source_format='CSV',
         skip_leading_rows=1,
         field_delimiter=';',
-        destination_project_dataset_table='regal-oasis-291423.working_dataset.retail_years_aws', #########################
+        destination_project_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_aws', #########################
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND'
     )
@@ -52,7 +54,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     query = (
         '''
         SELECT `year`, `area`, ROUND(AVG(`total_inc`), 4) AS avg_income
-        FROM `regal-oasis-291423.working_dataset.retail_years_aws`
+        FROM `serene-gradient-371719.airflow_trabajo.retail_years_aws`
         GROUP BY `year`, `area`
         ORDER BY `area` ASC
         '''
@@ -61,14 +63,15 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     tabla_resumen = BigQueryExecuteQueryOperator(
         task_id='tabla_resumen',
         sql=query,
-        destination_dataset_table='regal-oasis-291423.working_dataset.retail_years_resume_aws', #########################
+        destination_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_resume_aws', #########################
         write_disposition='WRITE_TRUNCATE',
         create_disposition='CREATE_IF_NEEDED',
         use_legacy_sql=False,
-        location='us-east1'
+        location='us-central1'
     )
 
+    end_task = DummyOperator(task_id='end_task')
 
 ######################### DEPENDENCIES
 
-transferir_aws >> cargar_datos >> tabla_resumen
+start_task >> transferir_aws >> cargar_datos >> tabla_resumen >> end_task

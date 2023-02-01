@@ -8,7 +8,7 @@ from airflow.providers.google.cloud.operators.bigquery import BigQueryExecuteQue
 
 ######################### AZURE BLOBS to GCS
 from airflow.providers.microsoft.azure.transfers.azure_blob_to_gcs import AzureBlobStorageToGCSOperator
-
+from airflow.operators.dummy import DummyOperator
 
 default_args = {
     'owner': 'Rodrigo N',
@@ -25,19 +25,33 @@ dag_args = {
 
 with DAG(**dag_args,tags=['Curso_1']) as dag:
 
+    start_task = DummyOperator(task_id='start_task')
+
     #########################
-    transferir_azure = AzureBlobStorageToGCSOperator(
-        task_id='transferir_azure',
+    transferir_azure_2020 = AzureBlobStorageToGCSOperator(
+        task_id='transferir_azure_2020',
         # Azure
-        wasb_conn_id='wasb_default', 
         container_name='airflowbucket',
-        blob_name='retail_2020_azure.csv',
-        file_path='retail_2020_azure.csv',
+        blob_name='retail_2020.csv',
+        file_path='retail_2020.csv',
         # GCP
-        gcp_conn_id='google_cloud_default',
-        bucket_name='azure-bucket-987',
+        bucket_name='azure_airflow23',
         object_name='retail_2020_azure.csv',
         filename='retail_2020_azure.csv',
+        gzip=False,
+        delegate_to=None
+    )
+
+    transferir_azure_2021 = AzureBlobStorageToGCSOperator(
+        task_id='transferir_azure_2021',
+        # Azure
+        container_name='airflowbucket',
+        blob_name='retail_2021.csv',
+        file_path='retail_2021.csv',
+        # GCP
+        bucket_name='azure_airflow23',
+        object_name='retail_2021_azure.csv',
+        filename='retail_2021_azure.csv',
         gzip=False,
         delegate_to=None
     )
@@ -45,12 +59,12 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 
     cargar_datos = GCSToBigQueryOperator(
         task_id='cargar_datos',
-        bucket='azure-bucket-987',  #########################
+        bucket='azure_airflow23',  #########################
         source_objects=['*'],
         source_format='CSV',
         skip_leading_rows=1,
         field_delimiter=';',
-        destination_project_dataset_table='regal-oasis-291423.working_dataset.retail_years_azure',  #########################
+        destination_project_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_azure',  #########################
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND'
     )
@@ -58,7 +72,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     query = (
         '''
         SELECT `year`, `area`, ROUND(AVG(`total_inc`), 4) AS avg_income
-        FROM `regal-oasis-291423.working_dataset.retail_years_azure`
+        FROM `serene-gradient-371719.airflow_trabajo.retail_years_azure`
         GROUP BY `year`, `area`
         ORDER BY `area` ASC
         '''
@@ -67,14 +81,15 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     tabla_resumen = BigQueryExecuteQueryOperator(
         task_id='tabla_resumen',
         sql=query,
-        destination_dataset_table='regal-oasis-291423.working_dataset.retail_years_resume_azure',   #########################
+        destination_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_resume_azure',   #########################
         write_disposition='WRITE_TRUNCATE',
         create_disposition='CREATE_IF_NEEDED',
         use_legacy_sql=False,
-        location='us-east1'
+        location='us-central1'
     )
 
+    end_task = DummyOperator(task_id='end_task')
 
 ######################### DEPENDENCIES
 
-transferir_azure >> cargar_datos >> tabla_resumen
+start_task >> [transferir_azure_2020,transferir_azure_2021] >> cargar_datos >> tabla_resumen >> end_task

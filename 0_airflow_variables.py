@@ -35,7 +35,7 @@ default_args = {
     'owner': OWNER,
     'start_date': days_ago(1)
 }
-
+ 
 dag_args = {
     'dag_id': '0_airflow_variables',
     'schedule_interval': INTERVAL,

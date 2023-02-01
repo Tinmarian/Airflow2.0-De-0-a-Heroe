@@ -8,6 +8,7 @@ from airflow.providers.google.cloud.operators.bigquery import BigQueryExecuteQue
 
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.operators.python import PythonOperator
+from airflow.operators.dummy import DummyOperator
 
 from datetime import date
 
@@ -48,22 +49,24 @@ def move_objects(source_bucket=None, destination_bucket=None, prefix=None, **kwa
 
 with DAG(**dag_args,tags=['Curso_1']) as dag:
 
+    start_task = DummyOperator(task_id='start_task')
+
     # LISTAR DOCUMENTOS
     list_files = PythonOperator(
         task_id='list_files',
         python_callable=list_objects,
-        op_args=['original-bucked-987']
+        op_args=['airflow23_bucket']
     )
     
 
     cargar_datos = GCSToBigQueryOperator(
         task_id='cargar_datos',
-        bucket='original-bucked-987',
+        bucket='airflow23_bucket',
         source_objects=['*'],
         source_format='CSV',
         skip_leading_rows=1,
         field_delimiter=';',
-        destination_project_dataset_table='regal-oasis-291423.working_dataset.retail_years',
+        destination_project_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_hooks_xcoms',
         create_disposition='CREATE_IF_NEEDED',
         write_disposition='WRITE_APPEND'
     )
@@ -71,7 +74,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     query = (
         '''
         SELECT `year`, `area`, ROUND(AVG(`total_inc`), 4) AS avg_income
-        FROM `regal-oasis-291423.working_dataset.retail_years`
+        FROM `serene-gradient-371719.airflow_trabajo.retail_years_hooks_xcoms`
         GROUP BY `year`, `area`
         ORDER BY `area` ASC
         '''
@@ -80,11 +83,11 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     tabla_resumen = BigQueryExecuteQueryOperator(
         task_id='tabla_resumen',
         sql=query,
-        destination_dataset_table='regal-oasis-291423.working_dataset.retail_years_resume',
+        destination_dataset_table='serene-gradient-371719.airflow_trabajo.retail_years_resume_hooks_xcoms',
         write_disposition='WRITE_TRUNCATE',
         create_disposition='CREATE_IF_NEEDED',
         use_legacy_sql=False,
-        location='us-east1'
+        location='us-central1'
     )
 
     # MOVER DOCUMENTOS
@@ -92,13 +95,14 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
         task_id='move_files',
         python_callable=move_objects,
         op_kwargs={
-            'source_bucket': 'original-bucked-987', 
-            'destination_bucket': 'temp-bucket-987', 
+            'source_bucket': 'airflow23_bucket', 
+            'destination_bucket': 'airflow23_final_bucket', 
             'prefix': str(date.today())
         }
     )
 
+    end_task = DummyOperator(task_id='end_task')
 
 # DEPENDENCIES
 
-list_files >> cargar_datos >> tabla_resumen >> move_files
+start_task >> list_files >> cargar_datos >> tabla_resumen >> move_files >> end_task
