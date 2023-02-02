@@ -18,27 +18,26 @@ def mySubDag(parent_dag=None, task_id=None, schedule_interval=None, default_args
 
         pyspark_subjob = {
             'reference': {
-                'project_id': 'regal-oasis-291423',
+                'project_id': 'serene-gradient-371719',
                 'job_id': f'b1b63d0a_subjob_{subtask}'
             },
             'placement': {
-                'cluster_name': 'spark-cluster-123'
+                'cluster_name': 'airflow-spark-cluster'
             },
             'labels': {
-                'airflow-version': 'v2-1-0'
+                'airflow-version': 'v2-3-0'
             },
             'pyspark_job': {
                 'jar_file_uris': ['gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar'],
-                'main_python_file_uri': f'gs://spark-bucket-987/pyspark/par_task/{subtask}.py'
+                'main_python_file_uri': f'gs://airflow_spark_bucket/par_task/{subtask}.py'
             }
         }
 
         DataprocSubmitJobOperator(
             task_id=subtask,
-            project_id='regal-oasis-291423',
-            location='us-east1',
+            project_id='serene-gradient-371719',
+            region='us-central1',
             job=pyspark_subjob,
-            gcp_conn_id='google_cloud_default',
             dag=subdag
         )
 

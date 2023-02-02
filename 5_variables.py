@@ -22,14 +22,7 @@ BUCKET = var['bucket']
 BACKUP_BUCKET = var['backup_bucket']
 DATASET = var['dataset']
 ORIG_TABLE = var['orig_table']
-
-{
-    "project":"",
-    "bucket":"",
-    "backup_bucket":"",
-    "dataset":"",
-    "orig_table":""
-}
+DEST_TABLE = var['dest_table']
 
 # ARGUMENTS
 default_args = {
@@ -46,7 +39,7 @@ dag_args = {
         'project': PROJECT,
         'dataset': DATASET,
         'orig_table': ORIG_TABLE,
-        'dest_table': '{}_resume'.format(ORIG_TABLE),
+        'dest_table': f'{DEST_TABLE}',
         'bucket': BUCKET,
         'backup_bucket': BACKUP_BUCKET
     },
@@ -119,7 +112,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
         write_disposition='WRITE_TRUNCATE',
         create_disposition='CREATE_IF_NEEDED',
         use_legacy_sql=False,
-        location='us-east1'
+        location='us-central1'
     )
 
     # TASK
@@ -129,7 +122,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
         op_kwargs={
             'source_bucket': '{{ bucket }}', 
             'destination_bucket': '{{ backup_bucket }}',
-            'prefix': '{{ ts_nodash }}'
+            'prefix': '{{ ts }}'
         },
         provide_context=True
     )

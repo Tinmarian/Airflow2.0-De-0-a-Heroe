@@ -6,13 +6,13 @@ from airflow.providers.google.cloud.operators.dataproc import DataprocCreateClus
 from airflow.operators.python import BranchPythonOperator
 from random import uniform
 
-from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitPySparkJobOperator
+# from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitPySparkJobOperator
 from airflow.providers.google.cloud.operators.dataproc import DataprocSubmitJobOperator
 
 from airflow.utils.task_group import TaskGroup
 
 from airflow.providers.google.cloud.operators.dataproc import DataprocDeleteClusterOperator
-
+from airflow.operators.dummy import DummyOperator
 
 ########################
 # DataprocSubmitPySparkJobOperator (IMPAR TASK)
@@ -20,7 +20,7 @@ from airflow.providers.google.cloud.operators.dataproc import DataprocDeleteClus
 # pyspark_job = DataprocSubmitPySparkJobOperator(
 #     task_id='pyspark_job',
 #     project_id='regal-oasis-291423',
-#     main='gs://spark-bucket-987/pyspark/impar_task/vars_stdp.py',
+#     main='gs://airflow_spark_bucket/pyspark/impar_task/vars_stdp.py',
 #     cluster_name='sparkcluster-987',
 #     dataproc_jars=['gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar'],
 #     region='us-east1'
@@ -58,14 +58,16 @@ def number_task(min_number=None, max_number=None):
 
 
 with DAG(**dag_args,tags=['Curso_1']) as dag:
+
+    start_task = DummyOperator(task_id='start_task')
     
     create_cluster = DataprocCreateClusterOperator(
         task_id='create_cluster',
-        project_id='regal-oasis-291423',
-        cluster_name='sparkcluster-987',
+        project_id='serene-gradient-371719',
+        cluster_name='airflow-spark-cluster',
         num_workers=2,
-        storage_bucket='spark-bucket-987',
-        region='us-east1'
+        storage_bucket='airflow_spark_bucket',
+        region='us-central1'
     )
 
 # BRANCHING: IDENTIFICAR NUMERO PAR O IMPAR
@@ -79,27 +81,26 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 # EJECUTAR PYSPARK JOB SI (CONDICION BRANCH IMPAR)
     pyspark_job = {
         'reference': {
-            'project_id': 'regal-oasis-291423',
-            'job_id': 'IMPARTASK_dfa22fbf'
+            'project_id': 'serene-gradient-371719',
+            'job_id': 'IMPARTASK_dfa23fbf'
         },
         'placement': {
-            'cluster_name': 'sparkcluster-987'
+            'cluster_name': 'airflow-spark-cluster'
         },
         'labels': {
-            'airflow-version': 'v2-1-0'
+            'airflow-version': 'v2-3-0'
         },
         'pyspark_job': {
             'jar_file_uris': ['gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar'],
-            'main_python_file_uri': 'gs://spark-bucket-987/pyspark/impar_task/vars_stdp.py'
+            'main_python_file_uri': 'gs://airflow_spark_bucket/impar_task/vars_stdp.py'
         }
     }
 
     impar_task = DataprocSubmitJobOperator(
         task_id='impar_task',
-        project_id='regal-oasis-291423',
-        location='us-east1',
-        job=pyspark_job,
-        gcp_conn_id='google_cloud_default'
+        project_id='serene-gradient-371719',
+        region='us-central1',
+        job=pyspark_job
     )
 
 
@@ -112,44 +113,44 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 
             pyspark_subjob = {
                 'reference': {
-                    'project_id': 'regal-oasis-291423',
-                    'job_id': 'PARTASK_dfa22fbf_{}'.format(subtask)
+                    'project_id': 'serene-gradient-371719',
+                    'job_id': 'PARTASK_dfa23fbf_{}'.format(subtask)
                 },
                 'placement': {
-                    'cluster_name': 'sparkcluster-987'
+                    'cluster_name': 'airflow-spark-cluster'
                 },
                 'labels': {
-                    'airflow-version': 'v2-1-0'
+                    'airflow-version': 'v2-3-0'
                 },
                 'pyspark_job': {
                     'jar_file_uris': ['gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar'],
-                    'main_python_file_uri': f'gs://spark-bucket-987/pyspark/par_task/{subtask}.py'
+                    'main_python_file_uri': f'gs://airflow_spark_bucket/par_task/{subtask}.py'
                 }
             }
 
             DataprocSubmitJobOperator(
                 task_id=subtask,
-                project_id='regal-oasis-291423',
-                location='us-east1',
-                job=pyspark_subjob,
-                gcp_conn_id='google_cloud_default'
+                project_id='serene-gradient-371719',
+                region='us-central1',
+                job=pyspark_subjob
             )
 
 
 # DELETE CLUSTER TASK (TRIGGERS)
     delete_cluster = DataprocDeleteClusterOperator(
         task_id='delete_cluster',
-        project_id='regal-oasis-291423',
-        cluster_name='sparkcluster-987',
-        region='us-east1',
+        project_id='serene-gradient-371719',
+        cluster_name='airflow-spark-cluster',
+        region='us-central1',
         trigger_rule='all_done'
     )
 
+    end_task = DummyOperator(task_id='end_task')
 
 # DEPENDENCIAS
 (
-    create_cluster
+    start_task >> create_cluster
     >> iden_number
     >> [ impar_task, par_task ]
-    >> delete_cluster
+    >> delete_cluster >> end_task
 )

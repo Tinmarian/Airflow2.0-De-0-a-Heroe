@@ -12,7 +12,7 @@ from airflow.providers.google.cloud.operators.dataproc import DataprocDeleteClus
 from airflow.operators.python import BranchPythonOperator
 
 from airflow.operators.subdag import SubDagOperator
-from pyspark_subdag import mySubDag
+from Airflow2_0_De_0_a_Heroe.pyspark_subdag import mySubDag
 
 from random import uniform
 
@@ -40,11 +40,11 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 # TASK 1: CREATE CLUSTER --> OPERATOR
     create_cluster = DataprocCreateClusterOperator(
         task_id='create_cluster',
-        project_id='regal-oasis-291423',
-        cluster_name='spark-cluster-123',
+        project_id='serene-gradient-371719',
+        cluster_name='airflow-spark-cluster',
         num_workers=2,
-        storage_bucket='spark-bucket-987',
-        region='us-east1',
+        storage_bucket='airflow_spark_bucket',
+        region='us-central1',
     )
 
 
@@ -64,27 +64,26 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
     ## TASK 3.1: EJECUTAR PYSPARK (IMPAR) --> OPERATOR
     pyspark_job = {
         'reference': {
-            'project_id': 'regal-oasis-291423',
+            'project_id': 'serene-gradient-371719',
             'job_id': '10ad560c_mainjob_std'
         },
         'placement': {
-            'cluster_name': 'spark-cluster-123'
+            'cluster_name': 'airflow-spark-cluster'
         },
         'labels': {
-            'airflow-version': 'v2-1-0'
+            'airflow-version': 'v2-3-0'
         },
         'pyspark_job': {
             'jar_file_uris': ['gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar'],
-            'main_python_file_uri': 'gs://spark-bucket-987/pyspark/impar_task/vars_stdp.py'
+            'main_python_file_uri': 'gs://airflow_spark_bucket/impar_task/vars_stdp.py'
         }
     }
 
     impar_task = DataprocSubmitJobOperator(
         task_id='impar_task',
-        project_id='regal-oasis-291423',
-        location='us-east1',
-        job=pyspark_job,
-        gcp_conn_id='google_cloud_default'
+        project_id='serene-gradient-371719',
+        region='us-central1',
+        job=pyspark_job
     )
 
     ## TASK 3.2: EJECUTAR PYSPARK (PAR) --> OPERATOR
@@ -104,10 +103,10 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
 # TASK 4: DELETE CLUSTER --> OPERATOR
     delete_cluster = DataprocDeleteClusterOperator(
         task_id='delete_cluster',
-        project_id='regal-oasis-291423',
-        cluster_name='spark-cluster-123',
+        project_id='serene-gradient-371719',
+        cluster_name='airflow-spark-cluster',
         trigger_rule='all_done',
-        region='us-east1'
+        region='us-central1'
     )
 
 

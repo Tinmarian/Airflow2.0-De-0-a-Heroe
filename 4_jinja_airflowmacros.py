@@ -8,6 +8,7 @@ from airflow.providers.google.cloud.operators.bigquery import BigQueryExecuteQue
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 
 from airflow.operators.python import PythonOperator
+from airflow.operators.dummy import DummyOperator
 
 
 # ARGUMENTS
@@ -22,12 +23,12 @@ dag_args = {
     'catchup': False, 
     'max_active_runs': 1,
     'user_defined_macros': {
-        'project': 'regal-oasis-291423',
-        'dataset': 'working_dataset',
-        'orig_table': 'retail_years',
-        'dest_table': '{}_resume'.format('retail_years'),
-        'bucket': 'original-bucked-987',
-        'backup_bucket': 'temp-bucket-987'
+        'project': 'serene-gradient-371719',
+        'dataset': 'airflow_trabajo',
+        'orig_table': 'retail_years_jinja_macros',
+        'dest_table': 'retail_years_resume_jinja_macros',
+        'bucket': 'airflow23_bucket',
+        'backup_bucket': 'airflow23_final_bucket'
     },
     'default_args': default_args
 }
@@ -53,6 +54,8 @@ def move_objects(source_bucket=None, destination_bucket=None, prefix=None, **kwa
 
 # DAG
 with DAG(**dag_args,tags=['Curso_1']) as dag:
+
+    start_task = DummyOperator(task_id='Start')
 
     # TASK
     list_files = PythonOperator(
@@ -98,7 +101,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
         write_disposition='WRITE_TRUNCATE',
         create_disposition='CREATE_IF_NEEDED',
         use_legacy_sql=False,
-        location='us-east1'
+        location='us-central1'
     )
 
     # TASK
@@ -113,6 +116,7 @@ with DAG(**dag_args,tags=['Curso_1']) as dag:
         provide_context=True
     )
 
+    end_task = DummyOperator(task_id='End')
 
 # Dependencies
-list_files >> cargar_datos >> tabla_resumen >> move_files
+start_task >> list_files >> cargar_datos >> tabla_resumen >> move_files >> end_task
