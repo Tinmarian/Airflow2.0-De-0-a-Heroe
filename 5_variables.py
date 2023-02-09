@@ -24,6 +24,17 @@ DATASET = var['dataset']
 ORIG_TABLE = var['orig_table']
 DEST_TABLE = var['dest_table']
 
+"""
+{
+    "project":"serene-gradient-371719",
+    "bucket":"airflow23_bucket",
+    "backup_bucket":"airflow23_final_bucket",
+    "dataset":"airflow_trabajo",
+    "orig_table":"retail_years_variables",
+    "dest_table":"retail_years_resume_variables"
+}
+"""
+
 # ARGUMENTS
 default_args = {
     'owner': 'David Sanchez',

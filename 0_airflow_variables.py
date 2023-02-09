@@ -31,6 +31,14 @@ OWNER = var['owner']
 MENSAJE = var['mensaje']
 INTERVAL = var['intervalo']
 
+"""
+{
+    "owner":"Tinmar",
+    "mensaje":"Mi primer DAG utilizando variables",
+    "intervalo":"00 12 * * *"
+}
+"""
+
 default_args = {
     'owner': OWNER,
     'start_date': days_ago(1)
